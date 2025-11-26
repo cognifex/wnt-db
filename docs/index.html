@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Longest Direct Regional Trains</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <main>
+    <header>
+      <h1>Longest Direct Regional Trains</h1>
+      <p>
+        Client-seitige Demo der Suche nach langen Direktverbindungen mit RE/RB/S-Bahn
+        auf Basis der öffentlichen API <code>v6.db.transport.rest</code>.
+      </p>
+      <p class="note">
+        Das läuft komplett statisch – ideal für GitHub Pages. Es wird kein eigener Backend-Server benötigt.
+      </p>
+    </header>
+
+    <section class="card">
+      <h2>Suche konfigurieren</h2>
+      <form id="search-form">
+        <div class="field">
+          <label for="station">Startbahnhof *</label>
+          <input id="station" name="station" type="text" required placeholder="z. B. Koblenz Hbf" />
+        </div>
+        <div class="field">
+          <label for="limit">Limit</label>
+          <input id="limit" name="limit" type="number" min="1" max="50" value="10" />
+        </div>
+        <div class="field">
+          <label for="duration">Zeitfenster (Minuten)</label>
+          <input id="duration" name="duration" type="number" min="30" max="720" value="240" />
+        </div>
+        <div class="field">
+          <label for="when">Startzeit (optional, ISO 8601)</label>
+          <input id="when" name="when" type="text" placeholder="2025-11-29T08:00:00+01:00" />
+        </div>
+        <button type="submit">Längste Verbindungen suchen</button>
+      </form>
+      <p class="small">
+        Hinweis: Es werden nur Regionalzüge (RE/RB/S-Bahn) betrachtet. Pro Linie/Richtung/Ziel wird die längste
+        Verbindung im gewählten Zeitfenster zurückgegeben.
+      </p>
+    </section>
+
+    <section class="card">
+      <div class="results-header">
+        <h2>Ergebnisse</h2>
+        <div id="status" aria-live="polite"></div>
+      </div>
+      <div id="results"></div>
+    </section>
+  </main>
+
+  <script type="module" src="app.js"></script>
+</body>
+</html>
