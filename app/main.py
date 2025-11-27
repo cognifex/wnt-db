@@ -4,6 +4,7 @@ from typing import Any, Dict, List, Optional
 
 import httpx
 from fastapi import FastAPI, HTTPException, Query
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
 DB_API_BASE = os.getenv("DB_API_BASE", "https://v6.db.transport.rest")
@@ -17,6 +18,22 @@ app = FastAPI(
     version="0.1.0",
 )
 
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[
+        "http://localhost",
+        "http://localhost:3000",
+        "http://localhost:4173",
+        "http://127.0.0.1:8000",
+        "http://localhost:8000",
+        "https://cognifex.github.io",
+        "https://cognifex.github.io/wnt-db",
+    ],
+    allow_credentials=False,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 class StationInfo(BaseModel):
     id: str

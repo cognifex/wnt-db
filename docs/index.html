@@ -15,7 +15,10 @@
         auf Basis der öffentlichen API <code>v6.db.transport.rest</code>.
       </p>
       <p class="note">
-        Das läuft komplett statisch – ideal für GitHub Pages. Es wird kein eigener Backend-Server benötigt.
+        Das Frontend läuft statisch (GitHub Pages) und spricht das FastAPI-Backend
+        <code>/longest-direct</code> an. Standardmäßig wird
+        <code>https://wnt-db.fly.dev</code> genutzt (override via <code>?apiBase=…</code>, lokal
+        <code>http://localhost:8000</code>).
       </p>
     </header>
 
