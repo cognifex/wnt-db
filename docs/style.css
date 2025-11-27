@@ -1,0 +1,132 @@
+:root {
+  color-scheme: light dark;
+  --bg: #0f1116;
+  --card: #161a23;
+  --text: #e6ebf5;
+  --muted: #9aa3b5;
+  --accent: #5bbad5;
+  --border: #242a38;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: "Inter", "Segoe UI", system-ui, -apple-system, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+}
+
+main {
+  max-width: 960px;
+  margin: 32px auto;
+  padding: 0 16px 40px;
+}
+
+header h1 {
+  margin: 0 0 8px;
+}
+
+p {
+  line-height: 1.5;
+}
+
+.note {
+  padding: 12px 14px;
+  border: 1px solid var(--border);
+  background: var(--card);
+  border-radius: 10px;
+  color: var(--muted);
+}
+
+.card {
+  margin-top: 24px;
+  padding: 20px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.2);
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  margin-bottom: 14px;
+}
+
+label {
+  font-weight: 600;
+  margin-bottom: 6px;
+}
+
+input {
+  padding: 10px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: #0c0e14;
+  color: var(--text);
+}
+
+button {
+  margin-top: 8px;
+  padding: 12px 16px;
+  border: none;
+  border-radius: 10px;
+  font-weight: 700;
+  cursor: pointer;
+  background: linear-gradient(135deg, #5bbad5, #6f8bff);
+  color: #0a0c12;
+}
+
+button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.results-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+#status {
+  color: var(--muted);
+  font-size: 0.95rem;
+}
+
+#results table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 12px;
+}
+
+#results th,
+#results td {
+  border-bottom: 1px solid var(--border);
+  padding: 10px;
+  text-align: left;
+}
+
+.small {
+  color: var(--muted);
+  margin-top: 8px;
+  font-size: 0.95rem;
+}
+
+.code {
+  font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+}
+
+@media (max-width: 640px) {
+  .results-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  th:nth-child(4),
+  td:nth-child(4) {
+    display: none; /* blend direction on mobile */
+  }
+}
