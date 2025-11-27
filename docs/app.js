@@ -1,4 +1,4 @@
-const DB_API_BASE = "https://v6.db.transport.rest";
+const API_BASE = getApiBase();
 const statusEl = document.getElementById("status");
 const resultsEl = document.getElementById("results");
 const form = document.getElementById("search-form");
@@ -33,127 +33,24 @@ form.addEventListener("submit", async (event) => {
 });
 
 async function findLongestDirect({ station, limit, duration, when }) {
-  const stationInfo = await resolveStationId(station);
-  const departures = await fetchDepartures(stationInfo.id, { duration, when });
-
-  if (!departures.length) {
-    throw new Error(`Keine Abfahrten im Zeitfenster für "${stationInfo.name}".`);
-  }
-
-  const maxDeparturesToCheck = Math.min(departures.length, 80);
-  const connections = new Map();
-
-  for (const dep of departures.slice(0, maxDeparturesToCheck)) {
-    const tripId = dep.tripId;
-    const line = dep.line || {};
-    if (!tripId || !Object.keys(line).length) continue;
-
-    const lineName = line.name || "Unbekannt";
-    const product = line.product || line.mode || "regional";
-    const direction = dep.direction || "";
-
-    const trip = await fetchTrip(tripId);
-    if (!trip) continue;
-
-    const stopovers = trip.stopovers || [];
-    if (!stopovers.length) continue;
-
-    const originIndex = stopovers.findIndex((s) => String(s.stop?.id) === String(stationInfo.id));
-    if (originIndex < 0 || originIndex >= stopovers.length - 1) continue;
-
-    const lastStop = stopovers[stopovers.length - 1];
-    const toStation = {
-      id: String(lastStop.stop?.id),
-      name: lastStop.stop?.name || "Unbekannt",
-    };
-
-    const originStop = stopovers[originIndex];
-    const depTimeStr = originStop.departure || originStop.plannedDeparture;
-    const arrTimeStr = lastStop.arrival || lastStop.plannedArrival;
-    const depTime = depTimeStr ? new Date(depTimeStr) : null;
-    const arrTime = arrTimeStr ? new Date(arrTimeStr) : null;
-    if (!depTime || !arrTime || isNaN(depTime) || isNaN(arrTime)) continue;
-
-    const durationMinutes = Math.floor((arrTime - depTime) / 60000);
-    if (durationMinutes <= 0) continue;
-
-    const stopsAfterOrigin = stopovers.length - originIndex - 1;
-    const key = `${lineName}|${direction}|${toStation.id}`;
-    const existing = connections.get(key);
-
-    if (!existing || durationMinutes > existing.durationMinutes) {
-      connections.set(key, {
-        lineName,
-        product,
-        direction,
-        fromStation: stationInfo,
-        toStation,
-        departure: depTime,
-        arrival: arrTime,
-        durationMinutes,
-        stopsAfterOrigin,
-        tripId,
-      });
-    }
-  }
-
-  if (!connections.size) {
-    throw new Error("Keine durchgehenden Regionalzug-Verbindungen mit berechenbarer Dauer gefunden.");
-  }
-
-  return Array.from(connections.values())
-    .sort((a, b) => b.durationMinutes - a.durationMinutes)
-    .slice(0, limit);
-}
-
-async function resolveStationId(query) {
-  const url = new URL(`${DB_API_BASE}/stations`);
-  url.searchParams.set("query", query);
-  url.searchParams.set("limit", "1");
-  url.searchParams.set("completion", "true");
-  url.searchParams.set("fuzzy", "true");
-
-  const resp = await fetch(url, { headers: { accept: "application/json" } });
-  if (!resp.ok) throw new Error(`Stationssuche fehlgeschlagen (${resp.status}).`);
-  const data = await resp.json();
-  const entry = Object.entries(data)[0];
-  if (!entry) throw new Error(`Kein Bahnhof gefunden für "${query}".`);
-  const [id, info] = entry;
-  return { id: String(id), name: info.name || query };
-}
-
-async function fetchDepartures(stationId, { duration, when }) {
-  const url = new URL(`${DB_API_BASE}/stops/${stationId}/departures`);
+  const url = new URL(`${API_BASE}/longest-direct`);
+  url.searchParams.set("station", station);
+  url.searchParams.set("limit", String(limit));
   url.searchParams.set("duration", String(duration));
-  url.searchParams.set("results", "200");
-  url.searchParams.set("language", "de");
-  url.searchParams.set("nationalExpress", "false");
-  url.searchParams.set("national", "false");
-  url.searchParams.set("regionalExpress", "true");
-  url.searchParams.set("regional", "true");
-  url.searchParams.set("suburban", "true");
-  url.searchParams.set("bus", "false");
-  url.searchParams.set("ferry", "false");
-  url.searchParams.set("subway", "false");
-  url.searchParams.set("tram", "false");
-  url.searchParams.set("taxi", "false");
   if (when) url.searchParams.set("when", when);
 
   const resp = await fetch(url, { headers: { accept: "application/json" } });
-  if (!resp.ok) throw new Error(`Abfahrten konnten nicht geladen werden (${resp.status}).`);
-  const data = await resp.json();
-  return Array.isArray(data) ? data : [];
-}
+  if (!resp.ok) {
+    const detail = await safeError(resp);
+    throw new Error(detail || `Backend-Fehler (${resp.status}).`);
+  }
 
-async function fetchTrip(tripId) {
-  const url = new URL(`${DB_API_BASE}/trips/${encodeURIComponent(tripId)}`);
-  url.searchParams.set("stopovers", "true");
-  url.searchParams.set("remarks", "false");
-  url.searchParams.set("polyline", "false");
-  url.searchParams.set("language", "de");
-  const resp = await fetch(url, { headers: { accept: "application/json" } });
-  if (!resp.ok) return null;
-  return resp.json();
+  const data = await resp.json();
+  if (!Array.isArray(data)) {
+    throw new Error("Antwort konnte nicht gelesen werden.");
+  }
+
+  return data.map(mapApiConnection);
 }
 
 function renderResults(connections) {
@@ -199,6 +96,41 @@ function renderResults(connections) {
 function setStatus(text, tone = "info") {
   statusEl.textContent = text;
   statusEl.dataset.tone = tone;
+}
+
+function safeError(resp) {
+  return resp
+    .json()
+    .then((data) => data?.detail || data?.message)
+    .catch(() => null);
+}
+
+function mapApiConnection(raw) {
+  return {
+    lineName: raw.line_name,
+    product: raw.product,
+    direction: raw.direction,
+    fromStation: raw.from_station,
+    toStation: raw.to_station,
+    departure: raw.departure,
+    arrival: raw.arrival,
+    durationMinutes: raw.duration_minutes,
+    stopsAfterOrigin: raw.stops_after_origin,
+    tripId: raw.trip_id,
+  };
+}
+
+function getApiBase() {
+  const urlOverride = new URLSearchParams(window.location.search).get("apiBase");
+  if (urlOverride) return urlOverride.replace(/\/$/, "");
+
+  if (window.WNT_DB_API_BASE) return String(window.WNT_DB_API_BASE).replace(/\/$/, "");
+
+  if (window.location.hostname.endsWith("github.io")) {
+    return "https://wnt-db.fly.dev";
+  }
+
+  return "http://localhost:8000";
 }
 
 function minutesToHhMm(minutes) {
